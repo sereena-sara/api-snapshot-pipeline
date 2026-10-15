@@ -1,10 +1,13 @@
 import json
+import os
 import ssl
 import urllib.request
 from datetime import datetime
 
-url = "https://dummyjson.com/quotes/random"
+DATASET_FILE = "dataset.json"
 
+# 1. Fetch live data
+url = "https://dummyjson.com/quotes/random"
 headers = {"User-Agent": "Mozilla/5.0"}
 context = ssl._create_unverified_context()
 req = urllib.request.Request(url, headers=headers)
@@ -12,21 +15,27 @@ req = urllib.request.Request(url, headers=headers)
 with urllib.request.urlopen(req, context=context) as response:
     raw_data = response.read().decode("utf-8")
 
-parsed_data = json.loads(raw_data)
+parsed = json.loads(raw_data)
 
-quote_text = parsed_data["quote"]
-author_name = parsed_data["author"]
-saved_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-# Bundle what we want to keep into a neat dictionary
-clean_record = {
-    "saved_at": saved_at,
-    "quote": quote_text,
-    "author": author_name,
+# 2. Structure new record
+new_entry = {
+    "quote_id": parsed["id"],
+    "quote": parsed["quote"],
+    "author": parsed["author"],
+    "collected_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
 }
 
-# Write it directly into a file called "quote.json"
-with open("quote.json", "w") as f:
-    json.dump(clean_record, f, indent=4)
+# 3. Load existing dataset or create an empty list
+if os.path.exists(DATASET_FILE):
+    with open(DATASET_FILE, "r") as f:
+        data_list = json.load(f)
+else:
+    data_list = []
 
-print(f"Saved to quote.json at {saved_at}!")
+# 4. Append and write back
+data_list.append(new_entry)
+
+with open(DATASET_FILE, "w") as f:
+    json.dump(data_list, f, indent=4)
+
+print(f"Logged quote #{new_entry['quote_id']}. Total records in dataset: {len(data_list)}")
